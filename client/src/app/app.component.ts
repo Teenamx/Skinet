@@ -1,5 +1,6 @@
 
 import { Component, OnInit } from '@angular/core';
+import { AccountService } from './account/account.service';
 import { BasketService } from './basket/basket.service';
 import { IProduct } from './shared/models/product';
 
@@ -12,9 +13,17 @@ export class AppComponent implements OnInit {
 
   title = 'Skinet';
   products:IProduct[];
-  constructor(private basketService:BasketService){}
+  constructor(private basketService:BasketService,private accountService:AccountService){}
 
   ngOnInit(): void {
+
+    this.loadBasket();
+    this.loadCurrentUser();
+
+  }
+
+  loadBasket()
+  {
     const basketId=localStorage.getItem('basket_id');
     if(basketId)
     {
@@ -25,7 +34,17 @@ export class AppComponent implements OnInit {
       }
       );
     }
+  }
+  loadCurrentUser()
+  {
+    const token=localStorage.getItem('token');
 
+      this.accountService.loadCurrentUser(token).subscribe(()=>{
+        console.log('loaded user');
+      },error=>{
+        console.log(error);
+      });
+    
   }
 
 }
