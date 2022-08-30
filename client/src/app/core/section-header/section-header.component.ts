@@ -14,6 +14,8 @@ export class SectionHeaderComponent implements OnInit {
 
   ngOnInit(): void {
     this.breadcrumb$=this.bcService.breadcrumbs$;
+    console.log("hai");
+    console.log(this.breadcrumb$);
   }
 
 }
