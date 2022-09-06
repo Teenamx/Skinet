@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Core.Specifications
 {
-    public class OrderWithItemsAndOrderingSpecification : BaseSpecification<Order>
+    public class OrderWithItemsAndOrderingSpecification : BaseSpecification<Entities.OrderAggregate.Order>
     {
         public OrderWithItemsAndOrderingSpecification(string email):base(o=>o.BuyerEmail==email)
         {

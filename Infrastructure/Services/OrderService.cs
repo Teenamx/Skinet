@@ -1,4 +1,5 @@
 ﻿using Core.Entities;
+using Core.Entities.Identity;
 using Core.Entities.OrderAggregate;
 using Core.Interfaces;
 using Core.Specifications;
@@ -15,15 +16,17 @@ namespace Infrastructure.Services
       
         private readonly IBasketRepository basketRepo;
         private readonly IUnitOfWork unitOfWork;
+        private readonly IPaymentService paymentService;
 
-        public OrderService(IBasketRepository basketRepo,IUnitOfWork unitOfWork)
+        public OrderService(IBasketRepository basketRepo,IUnitOfWork unitOfWork,IPaymentService paymentService)
         {
             
             this.basketRepo = basketRepo;
             this.unitOfWork = unitOfWork;
+            this.paymentService = paymentService;
         }
 
-        public async Task<Order> CreateOrderAsync(string buyerEmail, int deliveryMethodId, string basketId, Address shippingAddress)
+        public async Task<Order> CreateOrderAsync(string buyerEmail, int deliveryMethodId, string basketId, Core.Entities.OrderAggregate.Address shippingAddress)
         {
             //get basket from the repo
             var basket = await basketRepo.GetBasketAsync(basketId);
@@ -44,13 +47,38 @@ namespace Infrastructure.Services
 
             var deliveryMethod = await unitOfWork.Repository<DeliveryMethod>().GetByIdAsync(deliveryMethodId);
 
+
             //calc subtotal
 
             var subtotal = items.Sum(item => item.Price * item.Quantity);
 
+            //check to see if order exists
+            var spec = new OrderByPaymentIntentIdSpecification(basket.PaymentIntentId);
+            var existingOrder = await unitOfWork.Repository<Order>().GetEntityWithSpec(spec);
+             
+            if(existingOrder!=null)
+            {
+
+                unitOfWork.Repository<Order>().Delete(existingOrder);
+                AppUser address = new AppUser
+                {
+                    Address = new Core.Entities.Identity.Address
+                    {
+                        FirstName = shippingAddress.FirstName,
+                        LastName = shippingAddress.LastName,
+                        City = shippingAddress.City,
+                        State = shippingAddress.State,
+                        Street = shippingAddress.Street,
+                        pincode = shippingAddress.pincode
+
+                    }
+                };
+                await paymentService.CreateOrUpdatePaymentIntent(basket.Id,address);
+            }
+
             //create order
 
-            var order = new Order(items, buyerEmail, shippingAddress, deliveryMethod, subtotal);
+            var order = new Order(items, buyerEmail, shippingAddress, deliveryMethod, subtotal,basket.PaymentIntentId);
             
             unitOfWork.Repository<Order>().Add(order);
 
@@ -62,7 +90,7 @@ namespace Infrastructure.Services
                 return null;
             //delete Basket
 
-            await basketRepo.DeleteBasketAsync(basketId);
+            //await basketRepo.DeleteBasketAsync(basketId);
 
 
             // return order

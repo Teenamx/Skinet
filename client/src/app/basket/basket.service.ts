@@ -22,17 +22,35 @@ export class BasketService {
 
   constructor(private http:HttpClient) { }
 
+  createPaymentIntent()
+  {
+    console.log("id");
+    console.log(this.getCurrentBasketValue().id);
+    return this.http.post(this.baseUrl+'payment/'+this.getCurrentBasketValue().id,{})
+    .pipe(
+      map((basket:IBasket)=>{
+        this.basketSource.next(basket);
+
+      })
+    )
+  }
   setShippingPrice(deliveryMethod:IDeliveryMethod)
   {
     this.shipping=deliveryMethod.price;
-    this.calculateTotals();
+    const basket=this.getCurrentBasketValue();
+    basket.deliveryMethodId=deliveryMethod.id;
+    basket.shippingPrice=deliveryMethod.price;
+     this.calculateTotals();
+     this.setBasket(basket);
   }
   getBasket(id:string)
   {
     return this.http.get(this.baseUrl+'basket?id='+id)
     .pipe(
       map((basket:IBasket)=>{
+
         this.basketSource.next(basket);
+        this.shipping=basket.shippingPrice;
         this.calculateTotals();
       })
     );
@@ -95,6 +113,7 @@ export class BasketService {
   {
     this.basketSource.next(null);
     this.basketTotalSource.next(null);
+    this.shipping=0;
     localStorage.removeItem('basket_id');
   }
   removeItemFromBasket(item:IBasketItem)
